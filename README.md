@@ -1,8 +1,29 @@
 # dime - say it to me!
+simple xmpp client - tts aplication. write something by jabber and he will say it!
+could be used as extreme feedback device for you build environment.
+
+features:
+ * multiple instances possible (alsa mixing)
+ * different synthesizer wrapper
+ * different text filter to filter out bad words
 
 ## how to run
 ```
-root@voyage:~/share# ./runner.sh
+root@voyage:~/dime# ./runner.sh --config sally.cfg
+```
+
+simple JSON config added to select synthesizer and message filter.
+```
+{
+    "xmpp": {
+        "jid": "harry@10.0.30.10",
+        "pwd": "beer"
+    },
+    "system": {
+        "synthesizer": "synth.Espeak",
+        "msg_filter": "msg_filter.XmppMsgPassthrough"
+    }
+}
 ```
 
 ## demo system
@@ -40,7 +61,7 @@ python packages from pip:
 ### alsa mixer configuration
 to support multiple audio sources, enable the alse mixer plugin.
 ```
-root@voyage:~/share# cat ~/.asoundrc
+root@voyage:~/dime# cat ~/.asoundrc
 
 pcm.!default {
     type plug
@@ -85,31 +106,9 @@ ctl.mixer0 {
  * http://manpages.ubuntu.com/manpages/xenial/en/man1/pico2wave.1.html
 
 ## links
+ * http://stackoverflow.com/questions/1614059/how-to-make-python-speak
+ * http://askubuntu.com/questions/21811/how-can-i-install-and-use-text-to-speech-software
+ * http://askubuntu.com/questions/53896/natural-sounding-text-to-speech
 
-
-    http://stackoverflow.com/questions/1614059/how-to-make-python-speak
-
-
-
-        read this
-
-        http://askubuntu.com/questions/21811/how-can-i-install-and-use-text-to-speech-software
-
-        http://askubuntu.com/questions/53896/natural-sounding-text-to-speech
-
-        freetts
-
-        festival
-        Review: Text to speech on linux
-         libttspico-data
-        Review: Text to speech on linux
-
-        https://www.youtube.com/watch?v=cziGpZTKZko
-        HakTip - Free Text to Speech with Linux
-        HakTip - Free Text to Speech with Linux
-        https://www.youtube.com/watch?v=h2VbcoCw_oM
-
-        festival
-
-        http://xmpppy.sourceforge.net/examples/bot.py
-
+ * https://www.youtube.com/watch?v=cziGpZTKZko
+ * https://www.youtube.com/watch?v=h2VbcoCw_oM
