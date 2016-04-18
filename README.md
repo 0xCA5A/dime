@@ -1,6 +1,6 @@
 # dime - say it to me!
 simple xmpp client - tts aplication. write something by jabber and he will say it!
-could be used as extreme feedback device for you build environment.
+could be used as extreme feedback device for your build environment.
 
 features:
  * multiple instances possible (alsa mixing)
