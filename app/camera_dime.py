@@ -1,9 +1,5 @@
-import sys
 import logging
-import time
 import queue
-import json
-import argparse
 
 import lib.synth
 import lib.msg_filter
@@ -63,7 +59,7 @@ class CameraDimeRunner(lib.interface.DimeRunner):
 
         self._xmpp_dime_config = cfg
 
-        self._synth = None
+        self._speech = None
         self._cam_dime = None
 
     def start(self):
@@ -78,73 +74,39 @@ class CameraDimeRunner(lib.interface.DimeRunner):
             self._logger.fatal("unable to create object from '%s': %s", self._xmpp_dime_config["dime"]["synthesizer"], exception)
             return
 
-        self._synth = lib.synth.Speech(msg_queue_size=5, synthesizer=synth_impl)
+        self._speech = lib.synth.Speech(msg_queue_size=5, synthesizer=synth_impl)
         self._cam_dime = CameraDime(msg_proc=msg_proc, event_queue_size=2)
 
-        if not self._synth.check_system():
+        if not self._speech.check_system():
             raise Exception("synthesizer not ready, exit immediately")
         if not self._cam_dime.check_system():
             raise Exception("dime not ready, exit immediately")
 
         # register synth message queue at dime
-        self._cam_dime.register_target_queue(self._synth.text_queue)
+        self._cam_dime.register_target_queue(self._speech.text_queue)
 
         self._cam_dime.start()
-        self._synth.start()
+        self._speech.start()
 
     def stop(self):
         if self._cam_dime:
             self._cam_dime.stop()
             self._cam_dime.join()
-        if self._synth:
-            self._synth.stop()
-            self._synth.join()
+        if self._speech:
+            self._speech.stop()
+            self._speech.join()
 
     def is_up_and_running(self):
         system_status = True
         if self._cam_dime and not self._cam_dime.is_alive():
             self._logger.error("%s thread ist dead", self._cam_dime)
             system_status = False
-        if self._synth and not self._synth.is_alive():
-            self._logger.error("%s thread ist dead", self._synth)
+        if self._speech and not self._speech.is_alive():
+            self._logger.error("%s thread ist dead", self._speech)
             system_status = False
 
         return system_status
 
 
 if __name__ == "__main__":
-    LOGGER.info("starting application")
-
-    PARSER = argparse.ArgumentParser(description='start dime application')
-    PARSER.add_argument('--config', help='define a JSON config file')
-    ARGS = PARSER.parse_args()
-
-    if not ARGS.config:
-        PARSER.print_help()
-        sys.exit(1)
-
-    CFG = None
-    with open(ARGS.config, 'r') as cfg_file:
-        CFG = json.load(cfg_file)
-
-    DIME_RUNNER = CameraDimeRunner(CFG)
-    try:
-        DIME_RUNNER.start()
-    except Exception as exception:
-        LOGGER.error(exception)
-        sys.exit(1)
-
-    while True:
-        try:
-            LOGGER.debug("in main idle loop")
-            if not DIME_RUNNER.is_up_and_running():
-                break
-
-            time.sleep(1)
-
-        except KeyboardInterrupt:
-            LOGGER.info("KeyboardInterrupt caught, shut application down")
-            break
-
-    DIME_RUNNER.stop()
-    LOGGER.info("exit gracefully")
+    lib.helper.kickstart(CameraDimeRunner)

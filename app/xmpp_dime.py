@@ -47,37 +47,23 @@ class MessageProxyXMPP(ClientXMPP):
     def message(self, msg):
         if msg['type'] in ('chat', 'normal'):
 
-            if self._message_queue.full():
-                msg.reply("can not synthetisize your message, too many messages pending").send()
-                return
-
             if len(msg['body']) > self.MAX_MESSAGE_SIZE:
                 msg.reply("received message is too long (%d chars, max: %d), "
-                          "won't say anyting" % (len(msg['body']), self.MAX_MESSAGE_SIZE)).send()
+                          "drop message" % (len(msg['body']), self.MAX_MESSAGE_SIZE)).send()
+                return
+
+            if self._message_queue.full():
+                msg.reply("too many messages pending, drop message").send()
                 return
 
             # FIXME: using copy here due to reuse of msg object for response
             msg_cpy = copy.copy(msg)
             self._message_queue.put(msg_cpy)
 
-            msg.reply("received message '%s' - enqueued to synthesize... "
-                      "(queue fill level: %d / %d)" % (msg['body'].strip(),
-                                                       self._message_queue.qsize(),
-                                                       self._message_queue.maxsize)).send()
+            msg.reply("process message '%s' " % (msg['body'].strip()).send()
 
-#
-# class Dime(object):
-#
-#     def __init__(self, event_queue_size):
-#         self._event_queue = queue.Queue(maxsize=event_queue_size)
-#
-#     @property
-#     def event_queue(self):
-#         return self._event_queue
-#
 
 class XmppDime(lib.helper.StoppableThread):
-
     def __init__(self, synthesizer, xmpp_msg_filter, event_queue_size=4):
         super(XmppDime, self).__init__(event_queue_size)
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
@@ -151,38 +137,4 @@ class XmppDimeRunner(lib.interface.DimeRunner):
 
 
 if __name__ == "__main__":
-    LOGGER.info("starting application")
-
-    PARSER = argparse.ArgumentParser(description='start dime application')
-    PARSER.add_argument('--config', help='define a JSON config file')
-    ARGS = PARSER.parse_args()
-
-    if not ARGS.config:
-        PARSER.print_help()
-        sys.exit(1)
-
-    CFG = None
-    with open(ARGS.config, 'r') as cfg_file:
-        CFG = json.load(cfg_file)
-
-    DIME_RUNNER = XmppDimeRunner(CFG)
-    try:
-        DIME_RUNNER.start()
-    except Exception as exception:
-        LOGGER.error(exception)
-        sys.exit(1)
-
-    while True:
-        try:
-            LOGGER.debug("in main idle loop")
-            if not DIME_RUNNER.is_up_and_running():
-                break
-
-            time.sleep(1)
-
-        except KeyboardInterrupt:
-            LOGGER.info("KeyboardInterrupt caught, shut application down")
-            break
-
-    DIME_RUNNER.stop()
-    LOGGER.info("exit gracefully")
+    lib.helper.kickstart(XmppDimeRunner)
