@@ -103,12 +103,14 @@ class XmppDimeRunner(lib.interface.DimeRunner):
         self._xmpp_proxy.connect()
         self._xmpp_proxy.process(block=False)
 
-        # FIXME: state not ready
+        # FIXME: xmpp state not ready
         import time
         time.sleep(1)
 
         self._xmpp_dime.start()
         self._speech.start()
+
+        self._speech.text_queue.add("system successfully started - ready for take off!")
 
     def stop(self):
         if self._xmpp_proxy:

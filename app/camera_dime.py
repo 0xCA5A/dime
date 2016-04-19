@@ -37,6 +37,8 @@ class CameraDimeRunner(lib.interface.DimeRunner):
         self._cam_dime.start()
         self._speech.start()
 
+        self._speech.text_queue.add("system successfully started - ready for take off!")
+
     def stop(self):
         if self._cam_dime:
             self._cam_dime.stop()
