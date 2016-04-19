@@ -4,7 +4,7 @@ import time
 import logging
 import argparse
 import sys
-import os
+import subprocess
 import json
 
 import lib.synth
@@ -67,6 +67,9 @@ def get_lines_from_file(file_name):
     with open(file_name) as text_file:
         content = [line.strip() for line in text_file.readlines()]
 
+    # filter comment lines #
+    content = [line for line in content if not line.startswith("#")]
+
     LOGGER.debug("read %d lines from file '%s'", len(content), file_name)
     return content
 
@@ -74,7 +77,5 @@ def get_lines_from_file(file_name):
 def system_call(command):
     LOGGER.info("fire up system call '%s'", command)
     ascii_command = str(command.encode('utf-8').decode('ascii', 'ignore'))
-    # NOTE: if you have something linke echo "foo"; echo "bar" > /dev/null 2>&1,
-    # this filter does not work!
-    ascii_command += " > /dev/null 2>&1"
-    return os.system(ascii_command)
+    task = subprocess.Popen(ascii_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return task.wait()
