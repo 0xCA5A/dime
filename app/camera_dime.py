@@ -4,7 +4,7 @@ import lib.helper
 import lib.interface
 
 
-class CameraDime(lib.helper.Dime):
+class CameraDime(lib.interface.Dime):
     def __init__(self, msg_proc, event_queue_size=4):
         super(CameraDime, self).__init__(msg_proc=msg_proc, event_queue_size=event_queue_size)
 
@@ -37,7 +37,7 @@ class CameraDimeRunner(lib.interface.DimeRunner):
         self._cam_dime.start()
         self._speech.start()
 
-        self._speech.text_queue.add("system successfully started - ready for take off!")
+        self._speech.text_queue.put("system successfully started - ready for take off!")
 
     def stop(self):
         if self._cam_dime:

@@ -3,6 +3,7 @@ simple application to say something triggered by an event.
 
  * xmpp client - tts aplication. write something by jabber and he will say it!
  * camera event - tts application. say something if a movement is detected.
+ * timed event - tts application. read chuck norris facts randomly.
 
 could be used as extreme feedback device for your build environment.
 
@@ -14,7 +15,8 @@ features:
 ## how to run
 ```
 root@voyage:~/dime# ./xmpp_runner.sh --config cfg/xmpp_sally.cfg
-root@voyage:~/dime# ./xmpp_runner.sh --config cfg/xmpp_sally.cfg
+root@voyage:~/dime# ./timed_runner.sh --config cfg/event_timed.cfg
+root@voyage:~/dime# ./camera_runner.sh --config cfg/event_camera.cfg
 ```
 
 simple JSON config added to select synthesizer and message filter.

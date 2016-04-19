@@ -1,10 +1,10 @@
 # pylint: disable=line-too-long
-
 import logging
 import tempfile
 import queue
 
 import lib.interface
+import lib.helper
 
 
 class Festival(lib.interface.TtsSynth):
@@ -17,7 +17,7 @@ class Festival(lib.interface.TtsSynth):
         language = "english"
         command_string = 'echo "%s" | %s --tts ' \
                          '--language %s' % (text, self.BINARY_NAME, language)
-        if self.system_call(command_string) == 0:
+        if lib.helper.system_call(command_string) == 0:
             return True
 
     def check_system(self):
@@ -32,7 +32,7 @@ class Espeak(lib.interface.TtsSynth):
 
     def say(self, text):
         command_string = '%s --stdout "%s" | aplay' % (self.BINARY_NAME, text)
-        if self.system_call(command_string) == 0:
+        if lib.helper.system_call(command_string) == 0:
             return True
 
     def check_system(self):
@@ -56,8 +56,7 @@ class Pico2Wave(lib.interface.TtsSynth):
                                                                      tmp_file_name,
                                                                      text,
                                                                      tmp_file_name)
-
-        if self.system_call(command_string) == 0:
+        if lib.helper.system_call(command_string) == 0:
             return True
 
     def check_system(self):
@@ -69,8 +68,8 @@ class Dummy(lib.interface.TtsSynth):
         super(Dummy, self).__init__()
 
     def say(self, text):
-        command_string = 'echo "say: %s"' % text
-        if self.system_call(command_string) == 0:
+        command_string = 'echo "%s"' % text
+        if lib.helper.system_call(command_string) == 0:
             return True
 
     def check_system(self):

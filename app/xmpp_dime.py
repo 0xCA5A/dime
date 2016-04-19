@@ -61,7 +61,7 @@ class MessageProxyXMPP(ClientXMPP):
         self._target_event_queue_list.append(event_queue)
 
 
-class XmppDime(lib.helper.Dime):
+class XmppDime(lib.interface.Dime):
     def __init__(self, msg_proc, event_queue_size=4):
         super(XmppDime, self).__init__(msg_proc=msg_proc, event_queue_size=event_queue_size)
 
