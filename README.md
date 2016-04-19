@@ -1,27 +1,32 @@
 # dime - say it to me!
-simple xmpp client - tts aplication. write something by jabber and he will say it!
+simple application to say something triggered by an event.
+
+ * xmpp client - tts aplication. write something by jabber and he will say it!
+ * camera event - tts application. say something if a movement is detected.
+
 could be used as extreme feedback device for your build environment.
 
 features:
- * multiple instances possible (alsa mixing)
- * different synthesizer wrapper
- * different text filter to filter out bad words
+ * multiple tts synthesizer instances possible (alsa mixing)
+ * different synthesizer wrappers
+ * different text processors to process the text before synthesis
 
 ## how to run
 ```
-root@voyage:~/dime# ./runner.sh --config sally.cfg
+root@voyage:~/dime# ./xmpp_runner.sh --config cfg/xmpp_sally.cfg
+root@voyage:~/dime# ./xmpp_runner.sh --config cfg/xmpp_sally.cfg
 ```
 
 simple JSON config added to select synthesizer and message filter.
 ```
 {
     "xmpp": {
-        "jid": "harry@10.0.30.10",
+        "jid": "sally@10.0.30.10",
         "pwd": "beer"
     },
-    "system": {
-        "synthesizer": "synth.Espeak",
-        "msg_filter": "msg_filter.XmppMsgPassthrough"
+    "dime": {
+        "synthesizer": "lib.synth.Dummy",
+        "msg_proc": "lib.msg_proc.XmppMsgBadWordBlaming"
     }
 }
 ```
