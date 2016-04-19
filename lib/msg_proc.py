@@ -4,27 +4,6 @@ import logging
 import random
 
 
-class TxtPassthrough(object):
-    def __init__(self):
-        self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-        self._logger.info("using text filter '%s'", self)
-
-    def process(self, msg):
-        text = self._process(msg)
-        self._logger.debug("text before processor: '%s', text after processor: '%s'", msg, text)
-        return text
-
-    @staticmethod
-    def _process(msg):
-        return msg
-
-    def __repr__(self):
-        return self.__class__.__name__
-
-    def __str__(self):
-        return self.__repr__()
-
-
 class XmppMsgPassthrough(object):
     def __init__(self):
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
@@ -35,8 +14,7 @@ class XmppMsgPassthrough(object):
         self._logger.debug("text before processor: '%s', text after processor: '%s'", msg["body"], text)
         return text
 
-    @staticmethod
-    def _process(msg):
+    def _process(self, msg):
         return msg["body"]
 
     def __repr__(self):
@@ -69,7 +47,6 @@ class XmppMsgBadWordReplacer(XmppMsgBadWordRefuser):
     def _process(self, msg):
         text = msg["body"]
         bad_words_found = set([word for word in self._seven_dirty_words if word in text])
-        text = []
         # remove all words which contain something from the 'bad word list'
         for word in text.split(' '):
             for bad_word in bad_words_found:
@@ -122,3 +99,27 @@ class XmppMsgBadWordBlaming(XmppMsgBadWordRefuser):
         text_enum = text_enum + ending
 
         return text_enum
+
+
+class TxtPassthrough(XmppMsgPassthrough):
+    def __init__(self):
+        super(TxtPassthrough, self).__init__()
+
+    def process(self, txt):
+        text = self._process(txt)
+        self._logger.debug("text before processor: '%s', text after processor: '%s'", txt, text)
+        return text
+
+    def _process(self, txt):
+        return txt
+
+
+class TxtReverseWords(TxtPassthrough):
+    def __init__(self):
+        super(TxtReverseWords, self).__init__()
+
+    def _process(self, msg):
+        result = ""
+        for word in msg.split(' '):
+            result = result + " " + word[::-1]
+        return result
