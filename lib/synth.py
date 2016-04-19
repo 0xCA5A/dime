@@ -1,38 +1,10 @@
 import logging
-import os
 import tempfile
 
-
-class TtsInterface(object):
-    def __init__(self):
-        self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-
-    def say(self, text):
-        self._log_error()
-        return False
-
-    def check_system(self):
-        self._log_error()
-
-    def _log_error(self):
-        self.logger.warning("template function called")
-
-    def is_binary_here(self, binary_name):
-        self.logger.debug("check for binary '%s' on system", binary_name)
-        command_string = "which %s" % binary_name
-        if self.system_call(command_string) == 0:
-            return True
-
-        self.logger.error("binary not found on your system")
-
-    def system_call(self, command):
-        self.logger.debug("fire up system call '%s'", command)
-
-        ascii_command = str(command.encode('utf-8').decode('ascii', 'ignore'))
-        return os.system(ascii_command)
+import lib.interface
 
 
-class Festival(TtsInterface):
+class Festival(lib.interface.TtsSynth):
     BINARY_NAME = "festival"
 
     def __init__(self):
@@ -49,7 +21,7 @@ class Festival(TtsInterface):
         return self.is_binary_here(self.BINARY_NAME)
 
 
-class Espeak(TtsInterface):
+class Espeak(lib.interface.TtsSynth):
     BINARY_NAME = "espeak"
 
     def __init__(self):
@@ -64,7 +36,7 @@ class Espeak(TtsInterface):
         return self.is_binary_here(self.BINARY_NAME) and self.is_binary_here("aplay")
 
 
-class Pico2Wave(TtsInterface):
+class Pico2Wave(lib.interface.TtsSynth):
     BINARY_NAME = "pico2wave"
 
     def __init__(self):
@@ -87,6 +59,19 @@ class Pico2Wave(TtsInterface):
 
     def check_system(self):
         return self.is_binary_here(self.BINARY_NAME) and self.is_binary_here("aplay")
+
+
+class Dummy(lib.interface.TtsSynth):
+    def __init__(self):
+        super(Dummy, self).__init__()
+
+    def say(self, text):
+        command_string = 'echo "say: %s"' % text
+        if self.system_call(command_string) == 0:
+            return True
+
+    def check_system(self):
+        return True
 
 
 class Speech(object):

@@ -12,9 +12,10 @@ from sleekxmpp.exceptions import IqError, IqTimeout
 import lib.synth
 import lib.msg_filter
 import lib.helper
+import lib.interface
 
 
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)-12s %(levelname)-8s %(name)-16s %(message)s')
 LOGGER = logging.getLogger(__name__)
 
@@ -65,13 +66,20 @@ class MessageProxyXMPP(ClientXMPP):
                                                        self._message_queue.maxsize)).send()
 
 
-class Dime(lib.helper.StoppableThread):
+class Dime(object):
+
+    def __init__(self):
+
+        self._event_queue = queue.Queue()
+
+
+class XmppDime(lib.helper.StoppableThread, Dime):
 
     def __init__(self, synthesizer, xmpp_msg_filter, event_queue_size=4):
-        super(Dime, self).__init__()
+        super(XmppDime, self).__init__()
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
         self._event_queue = queue.Queue(maxsize=event_queue_size)
-        self._speech_synth = lib.synth.SpeechSynth(synthesizer=synthesizer)
+        self._speech_synth = lib.synth.Speech(synthesizer=synthesizer)
         self._xmpp_msg_filter = xmpp_msg_filter()
 
     @property
@@ -98,38 +106,34 @@ class Dime(lib.helper.StoppableThread):
         self._logger.info("exit gracefully")
 
 
-class DimeRunner(object):
-
+class XmppDimeRunner(lib.interface.DimeRunner):
     def __init__(self, cfg):
+        super(XmppDimeRunner, self).__init__()
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
-        self._dime_config = cfg
-        synthesizer = eval(cfg["system"]["synthesizer"])
-        msg_f = eval(cfg["system"]["msg_filter"])
+        self._xmpp_dime_config = cfg
+        synthesizer = eval(cfg["dime"]["synthesizer"])
+        msg_f = eval(cfg["dime"]["msg_filter"])
 
-        self._dime = Dime(synthesizer=synthesizer,
-                          xmpp_msg_filter=msg_f)
-        self._xmpp_proxy = MessageProxyXMPP(self._dime_config["xmpp"]["jid"],
-                                            self._dime_config["xmpp"]["pwd"],
-                                            self._dime.event_queue)
-
-    def __del__(self):
-        self._logger.debug("destructor called")
-        self.stop()
+        self._xmpp_dime = XmppDime(synthesizer=synthesizer,
+                                   xmpp_msg_filter=msg_f)
+        self._xmpp_proxy = MessageProxyXMPP(self._xmpp_dime_config["xmpp"]["jid"],
+                                            self._xmpp_dime_config["xmpp"]["pwd"],
+                                            self._xmpp_dime.event_queue)
 
     def start(self):
-        if not self._dime.check_system():
+        if not self._xmpp_dime.check_system():
             raise Exception("dime system not ready, exit immediately")
-        self._dime.start()
+        self._xmpp_dime.start()
         self._xmpp_proxy.connect()
         self._xmpp_proxy.process(block=False)
 
     def stop(self):
         if self._xmpp_proxy:
             self._xmpp_proxy.abort()
-        if self._dime:
-            self._dime.stop()
-            self._dime.join()
+        if self._xmpp_dime:
+            self._xmpp_dime.stop()
+            self._xmpp_dime.join()
 
     def is_up_and_running(self):
         system_status = True
@@ -139,8 +143,8 @@ class DimeRunner(object):
             self._logger.error("%s reports state '%s'", self._xmpp_proxy, bad_state)
             system_status = False
 
-        if not self._dime.is_alive():
-            self._logger.error("%s thread ist dead", self._dime)
+        if not self._xmpp_dime.is_alive():
+            self._logger.error("%s thread ist dead", self._xmpp_dime)
             system_status = False
 
         return system_status
@@ -161,7 +165,7 @@ if __name__ == "__main__":
     with open(ARGS.config, 'r') as cfg_file:
         CFG = json.load(cfg_file)
 
-    DIME_RUNNER = DimeRunner(CFG)
+    DIME_RUNNER = XmppDimeRunner(CFG)
     try:
         DIME_RUNNER.start()
     except Exception as exception:

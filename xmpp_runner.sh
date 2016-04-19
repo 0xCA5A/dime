@@ -8,6 +8,6 @@ export PYTHONPATH=${LIB_DIR}:${PYTHON_PATH}
 PYTHON="$(which python3)"
 
 echo -e "[${SCRIPT_NAME}] start dime"
-${PYTHON} -m app.dime $1 $2 $3 $4
+${PYTHON} -m app.xmpp_dime $1 $2 $3 $4
 
 echo -e "[${SCRIPT_NAME}] exit"
