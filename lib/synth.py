@@ -3,7 +3,7 @@ import os
 import tempfile
 
 
-class SpeechSynthInterface(object):
+class TtsInterface(object):
     def __init__(self):
         self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
@@ -32,7 +32,7 @@ class SpeechSynthInterface(object):
         return os.system(ascii_command)
 
 
-class Festival(SpeechSynthInterface):
+class Festival(TtsInterface):
     BINARY_NAME = "festival"
 
     def __init__(self):
@@ -49,7 +49,7 @@ class Festival(SpeechSynthInterface):
         return self.is_binary_here(self.BINARY_NAME)
 
 
-class Espeak(SpeechSynthInterface):
+class Espeak(TtsInterface):
     BINARY_NAME = "espeak"
 
     def __init__(self):
@@ -64,7 +64,7 @@ class Espeak(SpeechSynthInterface):
         return self.is_binary_here(self.BINARY_NAME) and self.is_binary_here("aplay")
 
 
-class Pico2Wave(SpeechSynthInterface):
+class Pico2Wave(TtsInterface):
     BINARY_NAME = "pico2wave"
 
     def __init__(self):
@@ -89,12 +89,13 @@ class Pico2Wave(SpeechSynthInterface):
         return self.is_binary_here(self.BINARY_NAME) and self.is_binary_here("aplay")
 
 
-class SpeechSynth(object):
+class Speech(object):
 
-    def __init__(self, synthesizer=Festival):
-        super(SpeechSynth, self).__init__()
+    def __init__(self, synthesizer=Pico2Wave):
+        super(Speech, self).__init__()
         self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
+        # TODO: do this more controlled, avoid exceptions in constructor
         self._synthesizer = synthesizer()
         self.logger.debug("configure '%s' as "
                           "synthesizer", self._synthesizer.__class__.__name__)

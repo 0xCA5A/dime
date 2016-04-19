@@ -1,16 +1,17 @@
 import sys
 import logging
 import time
-import threading
 import queue
 import copy
 import json
 import argparse
+
 from sleekxmpp import ClientXMPP
 from sleekxmpp.exceptions import IqError, IqTimeout
 
-import synth
-import msg_filter
+import lib.synth
+import lib.msg_filter
+import lib.helper
 
 
 logging.basicConfig(level=logging.INFO,
@@ -64,30 +65,13 @@ class MessageProxyXMPP(ClientXMPP):
                                                        self._message_queue.maxsize)).send()
 
 
-class StoppableThread(threading.Thread):
-    """thread class with a stop() method. The thread itself has to check
-    regularly for the stopped() condition.
-
-    source: http://stackoverflow.com/questions/323972/is-there-any-way-to-kill-a-thread-in-python
-    """
-    def __init__(self):
-        super(StoppableThread, self).__init__()
-        self._stop_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
-
-    def stopped(self):
-        return self._stop_event.is_set()
-
-
-class Dime(StoppableThread):
+class Dime(lib.helper.StoppableThread):
 
     def __init__(self, synthesizer, xmpp_msg_filter, event_queue_size=4):
         super(Dime, self).__init__()
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
         self._event_queue = queue.Queue(maxsize=event_queue_size)
-        self._speech_synth = synth.SpeechSynth(synthesizer=synthesizer)
+        self._speech_synth = lib.synth.SpeechSynth(synthesizer=synthesizer)
         self._xmpp_msg_filter = xmpp_msg_filter()
 
     @property
