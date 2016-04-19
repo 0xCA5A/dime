@@ -35,6 +35,10 @@ class TimedDime(lib.interface.Dime):
                 trigger_time = datetime.datetime.now() + datetime.timedelta(0, offset_s)
 
                 text_to_say = random.choice(lines)
+
+                # apply filter
+                text_to_say = self._msg_proc.process(text_to_say)
+
                 for target_queue in self._target_txt_queue_list:
                     try:
                         target_queue.put(text_to_say)
