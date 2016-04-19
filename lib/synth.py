@@ -1,7 +1,9 @@
 import logging
 import tempfile
+import queue
 
 import lib.interface
+import lib.helper
 
 
 class Festival(lib.interface.TtsSynth):
@@ -74,16 +76,21 @@ class Dummy(lib.interface.TtsSynth):
         return True
 
 
-class Speech(object):
+class Speech(lib.helper.StoppableThread):
 
-    def __init__(self, synthesizer=Pico2Wave):
+    def __init__(self, msg_queue_size=5, synthesizer=Pico2Wave):
         super(Speech, self).__init__()
-        self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
+        self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
+        self._text_queue = queue.Queue(maxsize=msg_queue_size)
 
         # TODO: do this more controlled, avoid exceptions in constructor
         self._synthesizer = synthesizer()
-        self.logger.debug("configure '%s' as "
-                          "synthesizer", self._synthesizer.__class__.__name__)
+        self._logger.debug("configure '%s' as "
+                           "synthesizer", self._synthesizer.__class__.__name__)
+
+    @property
+    def text_queue(self):
+        return self._text_queue
 
     def __repr__(self):
         return self._synthesizer.__class__.__name__
@@ -91,8 +98,20 @@ class Speech(object):
     def __str__(self):
         return self.__repr__()
 
-    def say(self, text):
-        return self._synthesizer.say(text)
-
     def check_system(self):
         return self._synthesizer.check_system()
+
+    def run(self):
+        self._logger.info("running, waiting on event queue...")
+        while not self.stopped():
+            try:
+                queue_element = self.text_queue.get(timeout=1)
+            except queue.Empty:
+                self._logger.debug("timeout on empty queue, continue")
+                continue
+
+            if not self._synthesizer.say(queue_element):
+                self._logger.error("could not say '%s' using synthesizer"
+                                   " '%s'!", queue_element, self._synthesizer)
+
+        self._logger.info("exit gracefully")

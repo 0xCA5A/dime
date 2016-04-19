@@ -2,17 +2,37 @@ import logging
 import random
 
 
+class TxtPassthrough(object):
+    def __init__(self):
+        self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
+        self._logger.info("using text filter '%s'", self)
+
+    def process(self, msg):
+        text = self._process(msg)
+        self._logger.debug("text before processor: '%s', text after processor: '%s'", msg, text)
+        return text
+
+    def _process(self, msg):
+        return msg
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+    def __str__(self):
+        return self.__repr__()
+
+
 class XmppMsgPassthrough(object):
     def __init__(self):
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-        self._logger.info("using message filter '%s'", self)
+        self._logger.info("using XMPP message filter '%s'", self)
 
-    def get_text(self, msg):
-        text = self._get_text(msg)
-        self._logger.debug("text before filter: '%s', text after filter: '%s'", msg["body"], text)
+    def process(self, msg):
+        text = self._process(msg)
+        self._logger.debug("text before processor: '%s', text after processor: '%s'", msg["body"], text)
         return text
 
-    def _get_text(self, msg):
+    def _process(self, msg):
         return msg["body"]
 
     def __repr__(self):
@@ -29,7 +49,7 @@ class XmppMsgBadWordRefuser(XmppMsgPassthrough):
         # source https://en.wikipedia.org/wiki/Seven_dirty_words
         self._seven_dirty_words = ("shit", "piss", "fuck", "cunt", "cocksucker", "motherfucker", "tits")
 
-    def _get_text(self, msg):
+    def _process(self, msg):
         text = msg["body"]
         if any(bad_word in text for bad_word in self._seven_dirty_words):
             user = repr(msg['from']).split('@')[0]
@@ -42,7 +62,7 @@ class XmppMsgBadWordReplacer(XmppMsgBadWordRefuser):
     def __init__(self):
         super(XmppMsgBadWordReplacer, self).__init__()
 
-    def _get_text(self, msg):
+    def _process(self, msg):
         text = msg["body"]
         bad_words_found = set([word for word in self._seven_dirty_words if word in text])
         text = []
@@ -61,7 +81,7 @@ class XmppMsgBadWordBlaming(XmppMsgBadWordRefuser):
     def __init__(self):
         super(XmppMsgBadWordBlaming, self).__init__()
 
-    def _get_text(self, msg):
+    def _process(self, msg):
         text = msg["body"]
 
         bad_word_list = []

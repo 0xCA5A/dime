@@ -65,43 +65,41 @@ class MessageProxyXMPP(ClientXMPP):
                                                        self._message_queue.qsize(),
                                                        self._message_queue.maxsize)).send()
 
+#
+# class Dime(object):
+#
+#     def __init__(self, event_queue_size):
+#         self._event_queue = queue.Queue(maxsize=event_queue_size)
+#
+#     @property
+#     def event_queue(self):
+#         return self._event_queue
+#
 
-class Dime(object):
-
-    def __init__(self):
-
-        self._event_queue = queue.Queue()
-
-
-class XmppDime(lib.helper.StoppableThread, Dime):
+class XmppDime(lib.helper.StoppableThread):
 
     def __init__(self, synthesizer, xmpp_msg_filter, event_queue_size=4):
-        super(XmppDime, self).__init__()
+        super(XmppDime, self).__init__(event_queue_size)
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-        self._event_queue = queue.Queue(maxsize=event_queue_size)
-        self._speech_synth = lib.synth.Speech(synthesizer=synthesizer)
+        self._speech = lib.synth.Speech(synthesizer=synthesizer)
         self._xmpp_msg_filter = xmpp_msg_filter()
 
-    @property
-    def event_queue(self):
-        return self._event_queue
-
     def check_system(self):
-        return self._speech_synth.check_system()
+        return self._speech.check_system()
 
     def run(self):
         self._logger.info("running, waiting on event queue...")
         while not self.stopped():
             try:
-                queue_element = self._event_queue.get(timeout=1)
+                queue_element = self.event_queue.get(timeout=1)
             except queue.Empty:
                 self._logger.debug("timeout on empty queue, continue")
                 continue
 
             text_to_say = self._xmpp_msg_filter.get_text(queue_element)
-            if not self._speech_synth.say(text_to_say):
+            if not self._speech.say(text_to_say):
                 self._logger.error("could not say '%s' using synthesizer"
-                                   " '%s'!", text_to_say, self._speech_synth)
+                                   " '%s'!", text_to_say, self._speech)
 
         self._logger.info("exit gracefully")
 
@@ -112,11 +110,13 @@ class XmppDimeRunner(lib.interface.DimeRunner):
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
         self._xmpp_dime_config = cfg
-        synthesizer = eval(cfg["dime"]["synthesizer"])
+        synth_impl = eval(cfg["dime"]["synthesizer"])
         msg_f = eval(cfg["dime"]["msg_filter"])
 
-        self._xmpp_dime = XmppDime(synthesizer=synthesizer,
-                                   xmpp_msg_filter=msg_f)
+        self._synth = synth_impl(msg_queue_size=5, synthesizer=synth_impl)
+        self._xmpp_dime = XmppDime(xmpp_msg_filter=msg_f, synth_msg_queue=self._synth.msg_queue)
+
+
         self._xmpp_proxy = MessageProxyXMPP(self._xmpp_dime_config["xmpp"]["jid"],
                                             self._xmpp_dime_config["xmpp"]["pwd"],
                                             self._xmpp_dime.event_queue)

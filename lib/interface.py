@@ -18,7 +18,7 @@ class DimeRunner(object):
         self._logger.warning("abstract function called")
 
 
-class TtsSynth(object):
+class Speech(object):
     def __init__(self):
         self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
@@ -31,6 +31,11 @@ class TtsSynth(object):
 
     def _log_impl_error(self):
         self.logger.warning("template function called")
+
+
+class TtsSynth(Speech):
+    def __init__(self):
+        super(TtsSynth, self).__init__()
 
     def is_binary_here(self, binary_name):
         self.logger.debug("check for binary '%s' on system", binary_name)
