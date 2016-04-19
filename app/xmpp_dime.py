@@ -1,33 +1,24 @@
-import sys
-import logging
-import time
-import queue
-import copy
-import json
-import argparse
+# pylint: disable=line-too-long
 
+import logging
+import copy
 from sleekxmpp import ClientXMPP
 from sleekxmpp.exceptions import IqError, IqTimeout
 
 import lib.synth
-import lib.msg_filter
 import lib.helper
 import lib.interface
-
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(filename)-12s %(levelname)-8s %(name)-16s %(message)s')
-LOGGER = logging.getLogger(__name__)
+import lib.msg_proc
 
 
 class MessageProxyXMPP(ClientXMPP):
 
     MAX_MESSAGE_SIZE = 256
 
-    def __init__(self, jid, password, message_queue):
+    def __init__(self, jid, password):
         super(MessageProxyXMPP, self).__init__(jid, password)
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-        self._message_queue = message_queue
+        self._target_event_queue_list = []
 
         self.add_event_handler("session_start", self.session_start)
         self.add_event_handler("message", self.message)
@@ -52,67 +43,72 @@ class MessageProxyXMPP(ClientXMPP):
                           "drop message" % (len(msg['body']), self.MAX_MESSAGE_SIZE)).send()
                 return
 
-            if self._message_queue.full():
-                msg.reply("too many messages pending, drop message").send()
-                return
+            for event_queue in self._target_event_queue_list:
+                if self.event_queue.full():
+                    msg.reply("too many messages pending, drop message").send()
+                    continue
 
-            # FIXME: using copy here due to reuse of msg object for response
-            msg_cpy = copy.copy(msg)
-            self._message_queue.put(msg_cpy)
-
-            msg.reply("process message '%s' " % (msg['body'].strip()).send()
-
-
-class XmppDime(lib.helper.StoppableThread):
-    def __init__(self, synthesizer, xmpp_msg_filter, event_queue_size=4):
-        super(XmppDime, self).__init__(event_queue_size)
-        self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-        self._speech = lib.synth.Speech(synthesizer=synthesizer)
-        self._xmpp_msg_filter = xmpp_msg_filter()
+                # FIXME: using copy here due to reuse of msg object for response
+                msg_cpy = copy.copy(msg)
+                event_queue.put(msg_cpy)
+                msg.reply("process message '%s' " % (msg['body'].strip()).send())
 
     def check_system(self):
-        return self._speech.check_system()
+        self._logger.warning("dummy implementation")
+        return True
 
-    def run(self):
-        self._logger.info("running, waiting on event queue...")
-        while not self.stopped():
-            try:
-                queue_element = self.event_queue.get(timeout=1)
-            except queue.Empty:
-                self._logger.debug("timeout on empty queue, continue")
-                continue
+    def register_target_event_queue(self, event_queue):
+        self._target_event_queue_list.append(event_queue)
 
-            text_to_say = self._xmpp_msg_filter.get_text(queue_element)
-            if not self._speech.say(text_to_say):
-                self._logger.error("could not say '%s' using synthesizer"
-                                   " '%s'!", text_to_say, self._speech)
 
-        self._logger.info("exit gracefully")
+class XmppDime(lib.helper.Dime):
+    def __init__(self, msg_proc, event_queue_size=4):
+        super(XmppDime, self).__init__(msg_proc=msg_proc, event_queue_size=event_queue_size)
 
 
 class XmppDimeRunner(lib.interface.DimeRunner):
     def __init__(self, cfg):
         super(XmppDimeRunner, self).__init__()
-        self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
         self._xmpp_dime_config = cfg
-        synth_impl = eval(cfg["dime"]["synthesizer"])
-        msg_f = eval(cfg["dime"]["msg_filter"])
 
-        self._synth = synth_impl(msg_queue_size=5, synthesizer=synth_impl)
-        self._xmpp_dime = XmppDime(xmpp_msg_filter=msg_f, synth_msg_queue=self._synth.msg_queue)
-
-
-        self._xmpp_proxy = MessageProxyXMPP(self._xmpp_dime_config["xmpp"]["jid"],
-                                            self._xmpp_dime_config["xmpp"]["pwd"],
-                                            self._xmpp_dime.event_queue)
+        self._speech = None
+        self._xmpp_dime = None
+        self._xmpp_proxy = None
 
     def start(self):
+        obj_name = self._xmpp_dime_config["dime"]["synthesizer"]
+        synth_type = lib.helper.get_obj_type(obj_name)
+        obj_name = self._xmpp_dime_config["dime"]["msg_proc"]
+        msg_proc = lib.helper.get_obj_type(obj_name)
+
+        self._speech = lib.synth.Speech(msg_queue_size=5, synthesizer=synth_type)
+        self._xmpp_dime = XmppDime(msg_proc=msg_proc, event_queue_size=2)
+        self._xmpp_proxy = MessageProxyXMPP(self._xmpp_dime_config["xmpp"]["jid"],
+                                            self._xmpp_dime_config["xmpp"]["pwd"])
+
+        if not self._speech.check_system():
+            raise Exception("synthesizer not ready, exit immediately")
         if not self._xmpp_dime.check_system():
-            raise Exception("dime system not ready, exit immediately")
-        self._xmpp_dime.start()
+            raise Exception("dime not ready, exit immediately")
+        if not self._xmpp_proxy.check_system():
+            raise Exception("xmpp proxy not ready, exit immediately")
+
+        # register synth message queue at dime
+        self._xmpp_dime.register_target_txt_queue(self._speech.text_queue)
+
+        # register dime event queue at proxy
+        self._xmpp_proxy.register_target_event_queue(self._xmpp_dime.event_queue)
+
         self._xmpp_proxy.connect()
         self._xmpp_proxy.process(block=False)
+
+        # FIXME: state not ready
+        import time
+        time.sleep(1)
+
+        self._xmpp_dime.start()
+        self._speech.start()
 
     def stop(self):
         if self._xmpp_proxy:
@@ -120,17 +116,24 @@ class XmppDimeRunner(lib.interface.DimeRunner):
         if self._xmpp_dime:
             self._xmpp_dime.stop()
             self._xmpp_dime.join()
+        if self._speech:
+            self._speech.stop()
+            self._speech.join()
 
     def is_up_and_running(self):
         system_status = True
 
         bad_state = "disconnected"
-        if self._xmpp_proxy.state.current_state() == bad_state:
+        if self._xmpp_proxy and self._xmpp_proxy.state and self._xmpp_proxy.state.current_state() == bad_state:
             self._logger.error("%s reports state '%s'", self._xmpp_proxy, bad_state)
             system_status = False
 
-        if not self._xmpp_dime.is_alive():
+        if self._xmpp_dime and not self._xmpp_dime.is_alive():
             self._logger.error("%s thread ist dead", self._xmpp_dime)
+            system_status = False
+
+        if self._speech and not self._speech.is_alive():
+            self._logger.error("%s thread ist dead", self._speech)
             system_status = False
 
         return system_status

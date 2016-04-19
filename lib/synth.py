@@ -1,9 +1,10 @@
+# pylint: disable=line-too-long
+
 import logging
 import tempfile
 import queue
 
 import lib.interface
-import lib.helper
 
 
 class Festival(lib.interface.TtsSynth):
@@ -76,7 +77,7 @@ class Dummy(lib.interface.TtsSynth):
         return True
 
 
-class Speech(lib.helper.StoppableThread):
+class Speech(lib.interface.StoppableThread):
 
     def __init__(self, msg_queue_size=5, synthesizer=Pico2Wave):
         super(Speech, self).__init__()

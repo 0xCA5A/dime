@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long
+
 import logging
 import random
 
@@ -12,7 +14,8 @@ class TxtPassthrough(object):
         self._logger.debug("text before processor: '%s', text after processor: '%s'", msg, text)
         return text
 
-    def _process(self, msg):
+    @staticmethod
+    def _process(msg):
         return msg
 
     def __repr__(self):
@@ -32,7 +35,8 @@ class XmppMsgPassthrough(object):
         self._logger.debug("text before processor: '%s', text after processor: '%s'", msg["body"], text)
         return text
 
-    def _process(self, msg):
+    @staticmethod
+    def _process(msg):
         return msg["body"]
 
     def __repr__(self):
@@ -87,7 +91,7 @@ class XmppMsgBadWordBlaming(XmppMsgBadWordRefuser):
         bad_word_list = []
         for bad_word in self._seven_dirty_words:
             if bad_word in text:
-               bad_word_list.append(bad_word)
+                bad_word_list.append(bad_word)
 
         bad_words_found = list(set(bad_word_list))
         if len(bad_words_found):

@@ -1,12 +1,30 @@
+# pylint: disable=line-too-long
+
 import logging
 import os
+import threading
+
+
+class StoppableThread(threading.Thread):
+    """thread class with a stop() method. The thread itself has to check
+    regularly for the stopped() condition.
+
+    source: http://stackoverflow.com/questions/323972/is-there-any-way-to-kill-a-thread-in-python
+    """
+    def __init__(self):
+        super(StoppableThread, self).__init__()
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
+
 
 class DimeRunner(object):
     def __init__(self):
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-
-    def start(self):
-        self._log_default_impl()
 
     def start(self):
         self._log_default_impl()
