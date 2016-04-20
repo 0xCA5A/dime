@@ -14,9 +14,7 @@ class Festival(lib.interface.TtsSynth):
         super(Festival, self).__init__()
 
     def say(self, text):
-        language = "english"
-        command_string = 'echo "%s" | %s --tts ' \
-                         '--language %s' % (text, self.BINARY_NAME, language)
+        command_string = 'echo "%s" | %s --tts' % (text, self.BINARY_NAME)
         if lib.helper.system_call(command_string) == 0:
             return True
 
