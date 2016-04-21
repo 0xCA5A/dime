@@ -27,8 +27,12 @@ def kickstart(dime_runner):
         parser.print_help()
         sys.exit(1)
 
-    with open(args.config, 'r') as cfg_file:
-        cfg = json.load(cfg_file)
+    try:
+        with open(args.config, 'r') as cfg_file:
+            cfg = json.load(cfg_file)
+    except Exception as exception:
+        LOGGER.error("unable to import JSON configuration: %s", exception)
+        sys.exit(1)
 
     dime_runner = dime_runner(cfg)
     try:
