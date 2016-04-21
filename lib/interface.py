@@ -67,10 +67,14 @@ class TtsSynth(Speech):
 
 
 class Dime(StoppableThread):
-    def __init__(self, msg_proc, event_queue_size=4):
+    def __init__(self, event_queue_size=4, msg_proc=None):
         super(Dime, self).__init__()
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-        self._msg_proc = msg_proc()
+
+        self._msg_proc = None
+        if msg_proc:
+            self._msg_proc = msg_proc()
+
         self._event_queue = queue.Queue(maxsize=event_queue_size)
         self._target_txt_queue_list = []
 
@@ -91,7 +95,12 @@ class Dime(StoppableThread):
                 self._logger.debug("timeout on empty queue, continue")
                 continue
 
-            text_to_say = self._msg_proc.process(queue_element)
+            # process text if processor defined
+            if self._msg_proc:
+                text_to_say = self._msg_proc.process(queue_element)
+            else:
+                text_to_say = text_to_say
+
             for target_queue in self._target_txt_queue_list:
                 try:
                     target_queue.put(text_to_say)
