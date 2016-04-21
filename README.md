@@ -19,7 +19,7 @@ root@voyage:~/dime# ./timed_runner.sh --config cfg/event_timed.cfg
 root@voyage:~/dime# ./camera_runner.sh --config cfg/event_camera.cfg
 ```
 
-simple JSON config added to select synthesizer and message filter.
+a simple JSON config could look like this:
 ```
 {
     "xmpp": {
@@ -47,6 +47,7 @@ additional packages (and dependencies):
  * python-pip3
  * alsa-utils
 
+
  * festival
  * festival-czech
  * festlex-cmu
@@ -58,12 +59,16 @@ additional packages (and dependencies):
  * festvox-kdlpc16k
  * festvox-rablpc16k
 
+
  * espeak
+
 
  * pico2wave
 
+
 python packages from pip:
  * SleekXMPP
+ * schedule
 
 ### alsa mixer configuration
 to support multiple audio sources, enable the alse mixer plugin.
@@ -116,6 +121,7 @@ ctl.mixer0 {
  * http://stackoverflow.com/questions/1614059/how-to-make-python-speak
  * http://askubuntu.com/questions/21811/how-can-i-install-and-use-text-to-speech-software
  * http://askubuntu.com/questions/53896/natural-sounding-text-to-speech
+
 
  * https://www.youtube.com/watch?v=cziGpZTKZko
  * https://www.youtube.com/watch?v=h2VbcoCw_oM
