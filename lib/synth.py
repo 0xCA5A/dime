@@ -48,7 +48,7 @@ class Pico2Wave(lib.interface.TtsSynth):
         lang = languages[0]
         tmp_file_name = tempfile.NamedTemporaryFile(prefix="pico_2_wave_",
                                                     suffix=".wav",
-                                                    delete=False).name
+                                                    delete=True).name
         command_string = '%s --lang %s --wave %s "%s" ; aplay %s' % (self.BINARY_NAME,
                                                                      lang,
                                                                      tmp_file_name,
