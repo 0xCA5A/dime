@@ -12,7 +12,7 @@ import lib.msg_proc
 
 
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(filename)-12s %(levelname)-8s %(name)-16s %(message)s')
+                    format='%(asctime)s %(filename)-12s %(lineno)-4s %(levelname)-8s %(name)-16s %(message)s')
 LOGGER = logging.getLogger(__name__)
 
 
@@ -74,8 +74,13 @@ def get_lines_from_file(file_name):
     # filter comment lines #
     content = [line for line in content if not line.startswith("#")]
 
-    LOGGER.debug("read %d lines from file '%s'", len(content), file_name)
-    return content
+    ascii_content = []
+    for line in content:
+        ascii_line= str(line.encode('utf-8').decode('ascii', 'ignore'))
+        ascii_content.append(ascii_line)
+
+    LOGGER.debug("read %d lines from file '%s'", len(ascii_content), file_name)
+    return ascii_content
 
 
 def system_call(command):
