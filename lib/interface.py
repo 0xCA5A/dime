@@ -67,13 +67,17 @@ class TtsSynth(Speech):
 
 
 class Dime(StoppableThread):
-    def __init__(self, event_queue_size=4, msg_proc=None):
+    def __init__(self, event_queue_size=4, msg_proc=None, msg_adapter=None):
         super(Dime, self).__init__()
         self._logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
         self._msg_proc = None
         if msg_proc:
             self._msg_proc = msg_proc()
+
+        self._msg_adapter = None
+        if msg_adapter:
+            self._msg_adapter = msg_adapter
 
         self._event_queue = queue.Queue(maxsize=event_queue_size)
         self._target_txt_queue_list = []
@@ -95,19 +99,38 @@ class Dime(StoppableThread):
                 self._logger.debug("timeout on empty queue, continue")
                 continue
 
+            self._logger.fatal(queue_element.keys())
+            self._logger.fatal(queue_element["body"])
+
+
+            self._logger.fatal(queue_element)
+
+            # adapt if adapter defined
+            if self._msg_adapter:
+                text = self._msg_adapter(queue_element)
+            else:
+                text = queue_element
+
             # process text if processor defined
             if self._msg_proc:
-                text_to_say = self._msg_proc.process(queue_element)
+                processed_text = self._msg_proc.process(text)
             else:
-                text_to_say = text_to_say
+                processed_text = text
 
             for target_queue in self._target_txt_queue_list:
                 try:
-                    target_queue.put(text_to_say)
+                    target_queue.put(processed_text)
                 except queue.Full as exception:
-                    self._logger.error("drop message '%s': %s", text_to_say, exception)
+                    self._logger.error("drop message '%s': %s", processed_text, exception)
 
         self._logger.info("exit gracefully")
 
     def register_target_txt_queue(self, txt_queue):
         self._target_txt_queue_list.append(txt_queue)
+
+
+class XmppMsgAdapter(str):
+    def __new__(cls, value):
+        txt = value['body']
+        obj = str.__new__(cls, txt)
+        return obj
