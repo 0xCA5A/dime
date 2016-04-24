@@ -68,7 +68,7 @@ additional packages (and dependencies):
 
 python packages from pip:
  * SleekXMPP
- * schedule
+ * apscheduler
 
 ### alsa mixer configuration
 to support multiple audio sources, enable the alse mixer plugin.

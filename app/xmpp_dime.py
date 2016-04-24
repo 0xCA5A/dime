@@ -51,7 +51,9 @@ class MessageProxyXMPP(ClientXMPP):
                 # FIXME: using copy here due to reuse of msg object for response
                 msg_cpy = copy.copy(msg)
                 event_queue.put(msg_cpy)
-                msg.reply("process message '%s' " % (msg['body'].strip()).send())
+
+                msg.reply("process message '%s' from user '%s'" % (msg['body'].strip(),
+                                                                   msg['user'].strip())).send()
 
     def check_system(self):
         self._logger.warning("dummy implementation")
@@ -62,8 +64,8 @@ class MessageProxyXMPP(ClientXMPP):
 
 
 class XmppDime(lib.interface.Dime):
-    def __init__(self, msg_proc, event_queue_size=4):
-        super(XmppDime, self).__init__(msg_proc=msg_proc, event_queue_size=event_queue_size)
+    def __init__(self, msg_proc, msg_adapter, event_queue_size=4):
+        super(XmppDime, self).__init__(msg_proc=msg_proc, msg_adapter=msg_adapter, event_queue_size=event_queue_size)
 
 
 class XmppDimeRunner(lib.interface.DimeRunner):
@@ -83,7 +85,7 @@ class XmppDimeRunner(lib.interface.DimeRunner):
         msg_proc = lib.helper.get_obj_type(obj_name)
 
         self._speech = lib.synth.Speech(msg_queue_size=5, synthesizer=synth_type)
-        self._xmpp_dime = XmppDime(msg_proc=msg_proc, event_queue_size=2)
+        self._xmpp_dime = XmppDime(msg_proc=msg_proc, msg_adapter=lib.interface.XmppMsgAdapter, event_queue_size=2)
         self._xmpp_proxy = MessageProxyXMPP(self._xmpp_dime_config["xmpp"]["jid"],
                                             self._xmpp_dime_config["xmpp"]["pwd"])
 
@@ -110,7 +112,7 @@ class XmppDimeRunner(lib.interface.DimeRunner):
         self._xmpp_dime.start()
         self._speech.start()
 
-        self._speech.text_queue.add("system successfully started - ready for take off!")
+        self._speech.text_queue.put("system successfully started - ready for take off!")
 
     def stop(self):
         if self._xmpp_proxy:

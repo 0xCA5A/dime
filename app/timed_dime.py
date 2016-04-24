@@ -1,7 +1,9 @@
-import queue
-import random
-import datetime
-import time
+# pylint: disable=line-too-long
+
+import logging
+import copy
+from sleekxmpp import ClientXMPP
+from sleekxmpp.exceptions import IqError, IqTimeout
 
 import lib.synth
 import lib.msg_proc
@@ -59,7 +61,7 @@ class TimedDimeRunner(lib.interface.DimeRunner):
 
         self._xmpp_dime_config = cfg
         self._speech = None
-        self._cam_dime = None
+        self._dime = None
 
     def start(self):
         obj_name = self._xmpp_dime_config["dime"]["synthesizer"]
@@ -68,35 +70,35 @@ class TimedDimeRunner(lib.interface.DimeRunner):
         msg_proc = lib.helper.get_obj_type(obj_name)
 
         self._speech = lib.synth.Speech(msg_queue_size=5, synthesizer=synth_type)
-        self._cam_dime = TimedDime(msg_proc=msg_proc,
-                                   text_file_name="data/chuck_norris_facts.txt",
-                                   event_queue_size=2)
+        self._dime = TimedDime(text_file_name="data/chuck_norris_facts.txt",
+                               event_queue_size=2,
+                               msg_proc=msg_proc)
 
         if not self._speech.check_system():
             raise Exception("synthesizer not ready, exit immediately")
-        if not self._cam_dime.check_system():
+        if not self._dime.check_system():
             raise Exception("dime not ready, exit immediately")
 
         # register synth message queue at dime
-        self._cam_dime.register_target_txt_queue(self._speech.text_queue)
+        self._dime.register_target_txt_queue(self._speech.text_queue)
 
-        self._cam_dime.start()
+        self._dime.start()
         self._speech.start()
 
         self._speech.text_queue.put("system successfully started - ready for take off!")
 
     def stop(self):
-        if self._cam_dime:
-            self._cam_dime.stop()
-            self._cam_dime.join()
+        if self._dime:
+            self._dime.stop()
+            self._dime.join()
         if self._speech:
             self._speech.stop()
             self._speech.join()
 
     def is_up_and_running(self):
         system_status = True
-        if self._cam_dime and not self._cam_dime.is_alive():
-            self._logger.error("%s thread ist dead", self._cam_dime)
+        if self._dime and not self._dime.is_alive():
+            self._logger.error("%s thread ist dead", self._dime)
             system_status = False
         if self._speech and not self._speech.is_alive():
             self._logger.error("%s thread ist dead", self._speech)

@@ -1,6 +1,9 @@
-import queue
-import time
-from apscheduler.schedulers.background import BackgroundScheduler
+# pylint: disable=line-too-long
+
+import logging
+import copy
+from sleekxmpp import ClientXMPP
+from sleekxmpp.exceptions import IqError, IqTimeout
 
 import lib.synth
 import lib.helper
