@@ -6,42 +6,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash
 
+from webdime import webdime
+
 import lib.synth
 import lib.helper
 import lib.interface
-
-
-APP = Flask(__name__)
-APP.config.update(dict(
-    DEBUG=True,
-))
-
-JOBS = [
-                    {
-                        "day_of_week" : "mon-fri",
-                        "hour" : 9,
-                        "minute" : 40,
-                        "msg" : "daily scrum starts in 5 minutes - get ready guys!"
-                    },
-                    {
-                        "day_of_week" : "mon-fri",
-                        "hour" : 9,
-                        "minute" : 45,
-                        "msg" : "daily scrum starts now!"
-                    },
-                    {
-                        "day_of_week" : "mon-fri",
-                        "hour" : 9,
-                        "minute" : 59,
-                        "msg" : "one minute left!"
-                    },
-                    {
-                        "day_of_week" : "mon-fri",
-                        "hour" : 10,
-                        "minute" : 0,
-                        "msg" : "daily scrum time is over - go and get a coffee!"
-                    }
-                ]
 
 
 class ScheduleDime(lib.interface.Dime):
@@ -53,6 +22,8 @@ class ScheduleDime(lib.interface.Dime):
         self._schedule_cfg = schedule_cfg
         self._scheduler = BackgroundScheduler()
 
+        self._job_queue = webdime.JOBS
+
         # http://apscheduler.readthedocs.org/en/latest/modules/triggers/cron.html
         # year (int|str) – 4-digit year
         # month (int|str) – month (1-12)
@@ -63,41 +34,6 @@ class ScheduleDime(lib.interface.Dime):
         # minute (int|str) – minute (0-59)
         # second (int|str) – second (0-59)
 
-
-
-    @staticmethod
-    def get_jobs_from_queue():
-        """Replace this function to get from scheduler"""
-        return JOBS
-
-    def add_job_to_queue(self, day_of_week, hour, minute, msg):
-        """Replace this function to add to scheduler"""
-        JOBS.append({
-            "day_of_week" : day_of_week,
-            "hour" : hour,
-            "minute" : minute,
-            "msg" : msg
-        })
-
-    @staticmethod
-    @APP.route('/')
-    def show_jobs():
-        jobs = ScheduleDime.get_jobs_from_queue()
-        return render_template('show_jobs.html', jobs=jobs)
-
-
-    @staticmethod
-    @APP.route('/add', methods=['POST'])
-    def add_job():
-        day_of_week = request.form['day_of_week']
-        hour = int(request.form['hour'])
-        minute = int(request.form['minute'])
-        msg = request.form['msg']
-
-        ScheduleDime.add_job_to_queue(day_of_week, hour, minute, msg)
-
-        return redirect(url_for('show_jobs'))
-
     def _add_message_to_queue(self, text_to_say):
         for target_queue in self._target_txt_queue_list:
             try:
@@ -105,35 +41,32 @@ class ScheduleDime(lib.interface.Dime):
             except queue.Full as exception:
                 self._logger.error("drop message '%s': %s", text_to_say, exception)
 
-    def job(self):
-        self._logger.fatal("test")
-
+    def gui_list_add_trigger(self, element):
+        day_of_week = element["day_of_week"]
+        hour = element["hour"]
+        minute = element["minute"]
+        msg = element["msg"]
+        self._scheduler.add_job(trigger='cron', func=self._add_message_to_queue, args=[msg],
+                                day_of_week=day_of_week,
+                                hour=hour,
+                                minute=minute)
     def run(self):
         self._logger.info("running, waiting on event queue...")
 
-        if not APP:
-            self._logger.error("something went wrong with flask")
-            return
-
+        self._logger.info("register GUI update function")
+        webdime.register_add_job_function(self.gui_list_add_trigger)
 
         self._scheduler.start()
         for job in self._schedule_cfg["jobs"]:
-            day_of_week = job["day_of_week"]
-            hour = job["hour"]
-            minute = job["minute"]
-            msg = job["msg"]
-            self._scheduler.add_job(trigger='cron', func=self._add_message_to_queue, args=[msg],
-                                    day_of_week=day_of_week,
-                                    hour=hour,
-                                    minute=minute)
+            self._job_queue.append(job)
+            self.gui_list_add_trigger(job)
 
-        # while not self.stopped():
-        #     time.sleep(self.SCHEDULER_SLEEP_TIME_S)
+        if not webdime.APP:
+            self._logger.error("something went wrong with flask")
+            return
 
-
-
-        APP.run(debug=True, use_reloader=False)
-        # this code here will never be reached...
+        # blocking
+        webdime.APP.run(debug=True, use_reloader=False)
 
         self._scheduler.shutdown()
         self._logger.info("exit gracefully")
@@ -175,12 +108,18 @@ class ScheduleDimeRunner(lib.interface.DimeRunner):
     def stop(self):
         self._speech.text_queue.put("system shutdown triggered - have a nice day!")
 
-        if self._dime:
-            self._dime.stop()
-            self._dime.join()
+        webdime.stop()
+
+        self._logger.fatal("after")
+
         if self._speech:
             self._speech.stop()
             self._speech.join()
+
+        # if self._dime:
+        #     self._dime.stop()
+        #     self._dime.join()
+
 
     def is_up_and_running(self):
         system_status = True
