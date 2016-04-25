@@ -7,7 +7,7 @@ LIB_DIR="${SCRIPTS_ROOT}/lib/"
 # virtualenv setup
 if [ ! -z ${VIRTUALENV_CFG+x} ]; then
     echo "[${SCRIPT_NAME}] configure virtualenv using file ${VIRTUALENV_CFG}"
-    virtualenv /tmp/venv
+    virtualenv -p python3 /tmp/venv
     source /tmp/venv/bin/activate
     pip3 install -r ${VIRTUALENV_CFG}
 
