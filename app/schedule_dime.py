@@ -1,13 +1,47 @@
 # pylint: disable=line-too-long
 
-import logging
-import copy
-from sleekxmpp import ClientXMPP
-from sleekxmpp.exceptions import IqError, IqTimeout
+import queue
+import time
+from apscheduler.schedulers.background import BackgroundScheduler
+from flask import Flask, request, session, g, redirect, url_for, abort, \
+     render_template, flash
 
 import lib.synth
 import lib.helper
 import lib.interface
+
+
+APP = Flask(__name__)
+APP.config.update(dict(
+    DEBUG=True,
+))
+
+JOBS = [
+                    {
+                        "day_of_week" : "mon-fri",
+                        "hour" : 9,
+                        "minute" : 40,
+                        "msg" : "daily scrum starts in 5 minutes - get ready guys!"
+                    },
+                    {
+                        "day_of_week" : "mon-fri",
+                        "hour" : 9,
+                        "minute" : 45,
+                        "msg" : "daily scrum starts now!"
+                    },
+                    {
+                        "day_of_week" : "mon-fri",
+                        "hour" : 9,
+                        "minute" : 59,
+                        "msg" : "one minute left!"
+                    },
+                    {
+                        "day_of_week" : "mon-fri",
+                        "hour" : 10,
+                        "minute" : 0,
+                        "msg" : "daily scrum time is over - go and get a coffee!"
+                    }
+                ]
 
 
 class ScheduleDime(lib.interface.Dime):
@@ -30,6 +64,40 @@ class ScheduleDime(lib.interface.Dime):
         # second (int|str) – second (0-59)
 
 
+
+    @staticmethod
+    def get_jobs_from_queue():
+        """Replace this function to get from scheduler"""
+        return JOBS
+
+    def add_job_to_queue(self, day_of_week, hour, minute, msg):
+        """Replace this function to add to scheduler"""
+        JOBS.append({
+            "day_of_week" : day_of_week,
+            "hour" : hour,
+            "minute" : minute,
+            "msg" : msg
+        })
+
+    @staticmethod
+    @APP.route('/')
+    def show_jobs():
+        jobs = ScheduleDime.get_jobs_from_queue()
+        return render_template('show_jobs.html', jobs=jobs)
+
+
+    @staticmethod
+    @APP.route('/add', methods=['POST'])
+    def add_job():
+        day_of_week = request.form['day_of_week']
+        hour = int(request.form['hour'])
+        minute = int(request.form['minute'])
+        msg = request.form['msg']
+
+        ScheduleDime.add_job_to_queue(day_of_week, hour, minute, msg)
+
+        return redirect(url_for('show_jobs'))
+
     def _add_message_to_queue(self, text_to_say):
         for target_queue in self._target_txt_queue_list:
             try:
@@ -43,6 +111,11 @@ class ScheduleDime(lib.interface.Dime):
     def run(self):
         self._logger.info("running, waiting on event queue...")
 
+        if not APP:
+            self._logger.error("something went wrong with flask")
+            return
+
+
         self._scheduler.start()
         for job in self._schedule_cfg["jobs"]:
             day_of_week = job["day_of_week"]
@@ -54,8 +127,13 @@ class ScheduleDime(lib.interface.Dime):
                                     hour=hour,
                                     minute=minute)
 
-        while not self.stopped():
-            time.sleep(self.SCHEDULER_SLEEP_TIME_S)
+        # while not self.stopped():
+        #     time.sleep(self.SCHEDULER_SLEEP_TIME_S)
+
+
+
+        APP.run(debug=True, use_reloader=False)
+        # this code here will never be reached...
 
         self._scheduler.shutdown()
         self._logger.info("exit gracefully")
