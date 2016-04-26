@@ -68,14 +68,18 @@ def shutdown():
 
 
 def stop():
+    url = 'http://localhost:5000/shutdown'
+    crl = pycurl.Curl()
+    crl.setopt(pycurl.URL, url)
+    crl.setopt(crl.POSTFIELDS, 'shutdown!')
+    # crl.setopt(crl.VERBOSE, True)
+    crl.setopt(pycurl.POST, 1)
 
-    print("called")
-
-    c = pycurl.Curl()
-    c.setopt(pycurl.URL, "127.0.0.1/shutdown")
-    c.setopt(pycurl.PORT, 5000)
-    c.setopt(pycurl.POST, 1)
-    c.perform()
+    # expect connection refused error
+    try:
+        crl.perform()
+    except Exception as exception:
+        pass
 
 
 if __name__ == "__main__":

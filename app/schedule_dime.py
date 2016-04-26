@@ -110,15 +110,13 @@ class ScheduleDimeRunner(lib.interface.DimeRunner):
 
         webdime.stop()
 
-        self._logger.fatal("after")
-
         if self._speech:
             self._speech.stop()
             self._speech.join()
 
-        # if self._dime:
-        #     self._dime.stop()
-        #     self._dime.join()
+        if self._dime:
+            self._dime.stop()
+            self._dime.join()
 
 
     def is_up_and_running(self):
