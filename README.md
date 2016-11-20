@@ -42,7 +42,7 @@ voyage linux
 
 additional packages (and dependencies):
  * python3
- * python-pip3
+ * python3-pip
  * alsa-utils
 
 
@@ -59,9 +59,7 @@ additional packages (and dependencies):
 
 
  * espeak
-
-
- * pico2wave
+ * libttspico-utils
 
 
 python packages from pip:
@@ -123,3 +121,6 @@ ctl.mixer0 {
 
  * https://www.youtube.com/watch?v=cziGpZTKZko
  * https://www.youtube.com/watch?v=h2VbcoCw_oM
+ 
+ * https://devel.freebsoft.org/speechd
+ 
